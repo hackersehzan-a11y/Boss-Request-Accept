@@ -1,43 +1,62 @@
 import os
+import logging
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ChatJoinRequest
 
-# Bot Credentials (Environment Variables)
-API_ID = int(os.environ.get("API_ID", "12345"))
-API_HASH = os.environ.get("API_HASH", "your_hash")
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "your_token")
+# Logging setup (Render logs me error dekhne ke liye)
+logging.basicConfig(level=logging.INFO)
 
-app = Client("AutoAcceptBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+# Environment Variables
+API_ID = os.environ.get("23903140")
+API_HASH = os.environ.get("579f1bcf3eac1660d81ef34b09906012")
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+
+# Check if vars are missing
+if not all([API_ID, API_HASH, BOT_TOKEN]):
+    print("❌ ERROR: API_ID, API_HASH, or BOT_TOKEN is missing in Render Env Vars!")
+    exit(1)
+
+app = Client(
+    "AutoAcceptBot",
+    api_id=int(API_ID),
+    api_hash=API_HASH,
+    bot_token=BOT_TOKEN
+)
 
 START_IMG = "https://graph.org/file/fc480c25a52ffb1a6363b-3e0e68a18b9f7a0517.jpg"
 
 @app.on_chat_join_request()
-async def accept_request(client, request: ChatJoinRequest):
-    user_id = request.from_user.id
-    chat_name = request.chat.title
-    
+async def handle_request(client, request: ChatJoinRequest):
     try:
-        # Request Accept Karein
-        await client.approve_chat_join_request(request.chat.id, user_id)
+        # User ko accept karo
+        await client.approve_chat_join_request(request.chat.id, request.from_user.id)
         
-        # User ko Stylish DM bhejein
-        text = f"ʜᴇʟʟᴏ {request.from_user.first_name}!\n\nʏᴏᴜʀ ʀᴇǫᴜᴇsᴛ ᴛᴏ ᴊᴏɪɴ **{chat_name}** ʜᴀs ʙᴇᴇɴ ᴀᴘᴘʀᴏᴠᴇᴅ. ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴏᴜʀ ᴄᴏᴍᴍᴜɴɪᴛʏ!"
+        # Stylish DM Message
+        text = (
+            f"ʜᴇʟʟᴏ {request.from_user.first_name}!\n\n"
+            f"ʏᴏᴜʀ ʀᴇǫᴜᴇsᴛ ᴛᴏ ᴊᴏɪɴ **{request.chat.title}** ʜᴀs ʙᴇᴇɴ ᴀᴘᴘʀᴏᴠᴇᴅ ✅\n\n"
+            "ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴛʜᴇ ᴄᴏᴍᴍᴜɴɪᴛʏ!"
+        )
         
         buttons = InlineKeyboardMarkup([
             [InlineKeyboardButton("➕ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ", url=f"https://t.me/{(await client.get_me()).username}?startgroup=true")],
-            [InlineKeyboardButton("👨‍💻 ᴏᴡɴᴇʀ", url="https://t.me/YourUsername"), 
-             InlineKeyboardButton("🆘 sᴜᴘᴘᴏʀᴛ", url="https://t.me/YourSupportGroup")],
-            [InlineKeyboardButton("❓ ʜᴇʟᴘ", callback_data="help_msg")]
+            [InlineKeyboardButton("🆘 sᴜᴘᴘᴏʀᴛ", url="https://t.me/YourSupport"), 
+             InlineKeyboardButton("👨‍💻 ᴏᴡɴᴇʀ", url="https://t.me/YourOwner")]
         ])
         
-        await client.send_photo(user_id, photo=START_IMG, caption=text, reply_markup=buttons)
+        await client.send_photo(request.from_user.id, photo=START_IMG, caption=text, reply_markup=buttons)
         
+        # LOGGING FOR YOU (As per your saved info)
+        print(f"ʟᴏɢ: ɴᴇᴡ ᴜsᴇʀ {request.from_user.id} ᴀᴄᴄᴇᴘᴛᴇᴅ ɪɴ {request.chat.id}")
+
     except Exception as e:
-        print(f"Error: {e}")
+        logging.error(f"Error in auto-accept: {e}")
 
-@app.on_message(filters.command("start"))
-async def start_cmd(client, message):
-    await message.reply_text("ʙᴏᴛ ɪs ᴀʟɪᴠᴇ ᴀɴᴅ ᴡᴏʀᴋɪɴɢ! ɪ ᴡɪʟʟ ᴀᴜᴛᴏ-ᴀᴄᴄᴇᴘᴛ ᴀʟʟ ᴊᴏɪɴ ʀᴇǫᴜᴇsᴛs.")
+@app.on_message(filters.command("start") & filters.private)
+async def start(client, message):
+    text = "ʙᴏᴛ ɪs ʀᴜɴɴɪɴɢ ᴘᴇʀғᴇᴄᴛʟʏ! ɪ ᴡɪʟʟ ᴀᴜᴛᴏ-ᴀᴄᴄᴇᴘᴛ ᴀʟʟ ᴊᴏɪɴ ʀᴇǫᴜᴇsᴛs."
+    await message.reply_text(text)
 
-print("Bot is Starting...")
-app.run()
+if __name__ == "__main__":
+    print("🚀 Bot Started Successfully!")
+    app.run()
